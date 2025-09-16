@@ -14,4 +14,5 @@ var (
 	ErrInvalidChannelBufferSize = errors.New("channel buffer size must be greater than zero")
 	ErrInvalidFileBufferSize    = errors.New("file buffer size must be greater than zero")
 	ErrEmptyTag                 = errors.New("tag cannot be empty")
+	ErrLoggerNotRunning         = errors.New("logger is not running")
 )

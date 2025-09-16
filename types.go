@@ -28,7 +28,8 @@ type (
 
 	// DefaultLogger is the default Logger implementation to handle writing log messages to a file.
 	DefaultLogger struct {
-		ch          chan *Message
+		messagesCh          chan *Message
+		ready       chan struct{}
 		wgProducers sync.WaitGroup
 		closed      atomic.Bool
 		isRunning   atomic.Bool
@@ -374,7 +375,7 @@ func (l *DefaultLogger) runToWrap(ctx context.Context) error {
 			defer timer.Stop()
 			for {
 				select {
-				case msg, ok := <-l.ch:
+				case msg, ok := <-l.messagesCh:
 					if !ok {
 						return ctx.Err()
 					}
@@ -395,7 +396,7 @@ func (l *DefaultLogger) runToWrap(ctx context.Context) error {
 					return ctx.Err()
 				}
 			}
-		case msg, ok := <-l.ch:
+		case msg, ok := <-l.messagesCh:
 			if !ok {
 				// Channel is closed, exit the loop
 				_ = writeLine(
@@ -451,7 +452,8 @@ func (l *DefaultLogger) Run(ctx context.Context, stopFn func()) error {
 	l.closed.Store(false)
 
 	// Reinitialize the messages channel
-	l.ch = make(chan *Message, l.channelBufferSize)
+	l.messagesCh = make(chan *Message, l.channelBufferSize)
+	close(l.ready)
 	defer l.close()
 
 	l.mutex.Unlock()
@@ -480,6 +482,12 @@ func (l *DefaultLogger) NewProducer(
 		return nil, ErrLoggerClosed
 	}
 
+	// Check if the logger is running
+	if !l.IsRunning() {
+		l.mutex.Unlock()
+		return nil, ErrLoggerNotRunning
+	}
+
 	// Increment the producer wait group counter
 	l.wgProducers.Add(1)
 	l.mutex.Unlock()
@@ -488,7 +496,7 @@ func (l *DefaultLogger) NewProducer(
 	loggerProducer, err := NewDefaultLoggerProducer(
 		l.timestampFormat,
 		func(m *Message) {
-			l.ch <- m
+			l.messagesCh <- m
 		},
 		func() { l.wgProducers.Done() },
 		tag,
@@ -504,26 +512,49 @@ func (l *DefaultLogger) NewProducer(
 // close signals no more producers will send; safe to call multiple times.
 func (l *DefaultLogger) close() {
 	l.mutex.Lock()
+	defer l.mutex.Unlock()
 
 	// Check if the logger is already closed
 	if l.IsClosed() {
-		l.mutex.Unlock()
 		return
 	}
 
 	// Mark the logger as closed
 	l.closed.Store(true)
 
-	l.mutex.Unlock()
-
 	// Wait for all registered producers to finish, then close channel.
 	l.wgProducers.Wait()
 
 	// Close the messages channel to signal no more messages will be sent.
-	close(l.ch)
+	close(l.messagesCh)
+	l.messagesCh = nil
+
+	// Create a new ready channel for future runs
+	l.ready = make(chan struct{})
+
+	// Set running to false
+	l.isRunning.Store(false)
 
 	// Reset the producer wait group
 	l.wgProducers = sync.WaitGroup{}
+}
+
+// WaitUntilReady blocks until the logger is ready or the context is done.
+//
+// Parameters:
+//
+// ctx: The context to control cancellation and timeouts.
+//
+// Returns:
+//
+// An error if the context is done before the logger is ready.
+func (l *DefaultLogger) WaitUntilReady(ctx context.Context) error {
+    select {
+    case <-l.ready:
+		return nil
+    case <-ctx.Done():
+        return ctx.Err()
+    }
 }
 
 // IsClosed returns true if the logger channel has been closed.

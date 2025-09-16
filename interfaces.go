@@ -28,5 +28,6 @@ type (
 		IsRunning() bool
 		IsClosed() bool
 		IsDebug() bool
+		WaitUntilReady(ctx context.Context) error
 	}
 )
