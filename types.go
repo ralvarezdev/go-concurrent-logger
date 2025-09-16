@@ -29,7 +29,7 @@ type (
 	// DefaultLogger is the default Logger implementation to handle writing log messages to a file.
 	DefaultLogger struct {
 		messagesCh          chan *Message
-		ready       chan struct{}
+		readyCh       chan struct{}
 		wgProducers sync.WaitGroup
 		closed      atomic.Bool
 		isRunning   atomic.Bool
@@ -252,6 +252,7 @@ func NewDefaultLogger(
 		fileBufferSize:         fileBufferSize,
 		tag:                    tag,
 		debug:                 debug,
+		readyCh:       make(chan struct{}),
 	}, nil
 }
 
@@ -453,7 +454,7 @@ func (l *DefaultLogger) Run(ctx context.Context, stopFn func()) error {
 
 	// Reinitialize the messages channel
 	l.messagesCh = make(chan *Message, l.channelBufferSize)
-	close(l.ready)
+	close(l.readyCh)
 	defer l.close()
 
 	l.mutex.Unlock()
@@ -530,7 +531,7 @@ func (l *DefaultLogger) close() {
 	l.messagesCh = nil
 
 	// Create a new ready channel for future runs
-	l.ready = make(chan struct{})
+	l.readyCh = make(chan struct{})
 
 	// Set running to false
 	l.isRunning.Store(false)
@@ -550,7 +551,7 @@ func (l *DefaultLogger) close() {
 // An error if the context is done before the logger is ready.
 func (l *DefaultLogger) WaitUntilReady(ctx context.Context) error {
     select {
-    case <-l.ready:
+    case <-l.readyCh:
 		return nil
     case <-ctx.Done():
         return ctx.Err()
