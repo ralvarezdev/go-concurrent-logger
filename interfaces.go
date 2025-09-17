@@ -22,12 +22,12 @@ type (
 	Logger interface {
 		NewProducer(
 			tag string,
+			debug bool,
 		) (LoggerProducer, error)
 		ChangeFilePath(newPath string) error
 		Run(ctx context.Context, stopFn func()) error
 		IsRunning() bool
 		IsClosed() bool
-		IsDebug() bool
 		WaitUntilReady(ctx context.Context) error
 	}
 )

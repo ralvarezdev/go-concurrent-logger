@@ -34,7 +34,6 @@ type (
 		closed      atomic.Bool
 		isRunning   atomic.Bool
 		mutex       sync.Mutex
-		debug       bool
 		filePath    string
 		gracefulShutdownTimeout time.Duration
 		timestampFormat 	  string
@@ -214,7 +213,6 @@ func (l *DefaultLoggerProducer) IsDebug() bool {
 // channelBufferSize: Size of the message channel buffer.
 // fileBufferSize: Size of the file write buffer.
 // tag: Default tag for log messages.
-// debug: Flag to indicate if the writer is in debug mode.
 //
 // Returns:
 //
@@ -226,7 +224,6 @@ func NewDefaultLogger(
 	channelBufferSize int,
 	fileBufferSize int,
 	tag string,
-	debug bool,
 ) (*DefaultLogger, error) {
 	// Validate the file path
 	if filePath == "" {
@@ -251,7 +248,6 @@ func NewDefaultLogger(
 		channelBufferSize:      channelBufferSize,
 		fileBufferSize:         fileBufferSize,
 		tag:                    tag,
-		debug:                 debug,
 		readyCh:       make(chan struct{}),
 	}, nil
 }
@@ -469,12 +465,14 @@ func (l *DefaultLogger) Run(ctx context.Context, stopFn func()) error {
 // Parameters:
 //
 // tag: Tag to identify the logger instance.
+// debug: Flag to indicate if the logger is in debug mode.
 //
 // Returns:
 //
 // A pointer to a LoggerProducer instance or an error if the parameters are invalid.
 func (l *DefaultLogger) NewProducer(
 	tag string,
+	debug bool,
 ) (LoggerProducer, error) {
 	l.mutex.Lock()
 
@@ -501,7 +499,7 @@ func (l *DefaultLogger) NewProducer(
 		},
 		func() { l.wgProducers.Done() },
 		tag,
-		l.debug,
+		debug,
 	)
 	if err != nil {
 		l.wgProducers.Done()
@@ -565,13 +563,4 @@ func (l *DefaultLogger) WaitUntilReady(ctx context.Context) error {
 // True if the logger channel is closed, otherwise false.
 func (l *DefaultLogger) IsClosed() bool {
 	return l.closed.Load()
-}
-
-// IsDebug returns true if the logger is in debug mode.
-//
-// Returns:
-//
-// True if the logger is in debug mode, otherwise false.
-func (l *DefaultLogger) IsDebug() bool {
-	return l.debug
 }
