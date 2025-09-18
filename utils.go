@@ -2,7 +2,7 @@ package go_concurrent_logger
 
 import (
 	"context"
-	
+
 	gocontext "github.com/ralvarezdev/go-context"
 )
 

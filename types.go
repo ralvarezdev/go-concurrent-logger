@@ -10,36 +10,36 @@ import (
 	"sync/atomic"
 	"time"
 
-	gocryptouuid "github.com/ralvarezdev/go-crypto/uuid"
 	gocontext "github.com/ralvarezdev/go-context"
+	gocryptouuid "github.com/ralvarezdev/go-crypto/uuid"
 )
 
 type (
 	// DefaultLoggerProducer is the default LoggerProducer implementation for messages with different severity levels
 	DefaultLoggerProducer struct {
-		sendFn  func(*Message)
-		closed  atomic.Bool
-		closeFn func()
-		tag     string
-		mutex   sync.Mutex
+		sendFn          func(*Message)
+		closed          atomic.Bool
+		closeFn         func()
+		tag             string
+		mutex           sync.Mutex
 		timestampFormat string
-		debug   bool
+		debug           bool
 	}
 
 	// DefaultLogger is the default Logger implementation to handle writing log messages to a file.
 	DefaultLogger struct {
-		messagesCh          chan *Message
-		readyCh       chan struct{}
-		wgProducers sync.WaitGroup
-		closed      atomic.Bool
-		isRunning   atomic.Bool
-		mutex       sync.Mutex
-		filePath    string
+		messagesCh              chan *Message
+		readyCh                 chan struct{}
+		wgProducers             sync.WaitGroup
+		closed                  atomic.Bool
+		isRunning               atomic.Bool
+		mutex                   sync.Mutex
+		filePath                string
 		gracefulShutdownTimeout time.Duration
-		timestampFormat 	  string
-		channelBufferSize      int
-		fileBufferSize         int
-		tag                    string
+		timestampFormat         string
+		channelBufferSize       int
+		fileBufferSize          int
+		tag                     string
 	}
 )
 
@@ -86,10 +86,10 @@ func NewDefaultLoggerProducer(
 	// Create a new DefaultLoggerProducer instance
 	producer := &DefaultLoggerProducer{
 		timestampFormat: timestampFormat,
-		sendFn:  sendFn,
-		closeFn: closeFn,
-		tag:     tag,
-		debug:   debug,
+		sendFn:          sendFn,
+		closeFn:         closeFn,
+		tag:             tag,
+		debug:           debug,
 	}
 
 	// Log the initialization if a tag is provided
@@ -242,13 +242,13 @@ func NewDefaultLogger(
 	}
 
 	return &DefaultLogger{
-		filePath:               filePath,
+		filePath:                filePath,
 		gracefulShutdownTimeout: gracefulShutdownTimeout,
-		timestampFormat:        timestampFormat,
-		channelBufferSize:      channelBufferSize,
-		fileBufferSize:         fileBufferSize,
-		tag:                    tag,
-		readyCh:       make(chan struct{}),
+		timestampFormat:         timestampFormat,
+		channelBufferSize:       channelBufferSize,
+		fileBufferSize:          fileBufferSize,
+		tag:                     tag,
+		readyCh:                 make(chan struct{}),
 	}, nil
 }
 
@@ -548,12 +548,12 @@ func (l *DefaultLogger) close() {
 //
 // An error if the context is done before the logger is ready.
 func (l *DefaultLogger) WaitUntilReady(ctx context.Context) error {
-    select {
-    case <-l.readyCh:
+	select {
+	case <-l.readyCh:
 		return nil
-    case <-ctx.Done():
-        return ctx.Err()
-    }
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 // IsClosed returns true if the logger channel has been closed.
