@@ -27,42 +27,42 @@ func LogOnError(fn func() error, loggerProducer LoggerProducer) error {
 	return err
 }
 
-// StopContextAndLogOnError stops the context if an error is encountered and logs the error.
+// CancelContextAndLogOnError cancels the context if an error is encountered and logs the error.
 //
 // Parameters:
 //
 // ctx: The context to be stopped.
-// stopFn: A function that stops the context with a given error.
+// cancelFn: A function that cancels the context with a given error.
 // fn: A function that returns an error.
 // loggerProducer: The logger producer to log messages.
 //
 // Returns:
 //
-// A function that executes the provided function and stops the context if an error occurs.
-func StopContextAndLogOnError(
+// A function that executes the provided function and cancels the context if an error occurs.
+func CancelContextAndLogOnError(
 	ctx context.Context,
-	stopFn func(),
+	cancelFn context.CancelFunc,
 	fn func(context.Context) error,
 	loggerProducer LoggerProducer,
 ) func() error {
 	return func() error {
 		// Recover from panic and log it to prevent unregistered goroutine panics
 		defer func() {
-        if r := recover(); r != nil {
-			if loggerProducer != nil {
-				loggerProducer.Error(
-					fmt.Errorf("goroutine panicked: %v", r),
-				)
-			} else {
-				fmt.Println("Goroutine panicked:", r)
+			if r := recover(); r != nil {
+				if loggerProducer != nil {
+					loggerProducer.Error(
+						fmt.Errorf("goroutine panicked: %v", r),
+					)
+				} else {
+					fmt.Println("Goroutine panicked:", r)
+				}
 			}
-        }
-    	}()
+		}()
 
-		// Stop the context on error and log the error if it occurs
-		err := gocontext.StopContextOnError(
+		// Cancel the context on error and log the error if it occurs
+		err := gocontext.CancelContextOnError(
 			ctx,
-			stopFn,
+			cancelFn,
 			fn,
 		)()
 		if err != nil && loggerProducer != nil {
