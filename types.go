@@ -455,7 +455,7 @@ func (l *DefaultLogger) Run(ctx context.Context, stopFn func()) error {
 
 	l.mutex.Unlock()
 
-	return gocontext.StopContextOnError(
+	return gocontext.CancelContextOnError(
 		ctx, stopFn, l.runToWrap,
 	)()
 }
