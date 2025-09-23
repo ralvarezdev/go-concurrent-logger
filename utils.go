@@ -2,7 +2,6 @@ package go_concurrent_logger
 
 import (
 	"context"
-	"fmt"
 
 	gocontext "github.com/ralvarezdev/go-context"
 )
@@ -46,19 +45,6 @@ func CancelContextAndLogOnError(
 	loggerProducer LoggerProducer,
 ) func() error {
 	return func() error {
-		// Recover from panic and log it to prevent unregistered goroutine panics
-		defer func() {
-			if r := recover(); r != nil {
-				if loggerProducer != nil {
-					loggerProducer.Error(
-						fmt.Errorf("goroutine panicked: %v", r),
-					)
-				} else {
-					fmt.Println("Goroutine panicked:", r)
-				}
-			}
-		}()
-
 		// Cancel the context on error and log the error if it occurs
 		err := gocontext.CancelContextOnError(
 			ctx,
